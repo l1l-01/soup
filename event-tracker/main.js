@@ -8,6 +8,19 @@ function selectA(cssClass) {
   return document.querySelectorAll(cssClass);
 }
 
+function throttleTrailing(func, delay) {
+  let timeoutId;
+
+  return function (e) {
+    if (timeoutId) return;
+
+    timeoutId = setTimeout(() => {
+      func(e);
+      timeoutId = undefined;
+    }, delay);
+  };
+}
+
 const userEnv = {
   appVersion: navigator.appVersion,
   browser: navigator.userAgentData?.brands?.[0]?.brand,
@@ -25,35 +38,51 @@ const record = {
   userEnv: userEnv,
   mouseCoords: [],
   scroll: [],
+  touchCoords: [],
+  window: { blur: 0, resize: 0 },
 };
 
-const momentousE = ["mousemove", "scroll"];
+const highFrequencyEvents = ["mousemove", "scroll", "touchmove"];
+const lowFrequencyEvents = ["resize", "blur"];
 
-const fns = [
+const highFrequencyFns = [
   function addMouseCoords(e) {
-    let t = Date.now();
+    const t = Date.now();
     record.mouseCoords.push({ x: e.clientX, y: e.clientY, t: t });
-    console.log(record);
   },
 
   function addScrollCoords() {
-    let date = new Date();
-    record.scroll.push({ x: window.scrollX, y: window.scrollY, t: date });
-    console.log(record);
+    const t = Date.now();
+    record.scroll.push({ x: window.scrollX, y: window.scrollY, t: t });
+  },
+
+  function addTouchCoords(e) {
+    const t = Date.now();
+    record.touchCoords.push({
+      x: e.changedTouches[0].clientX,
+      y: e.changedTouches[0].clientY,
+      t: t,
+    });
   },
 ];
 
-function debounce(func, delay) {
-  let timeoutId;
-  return function (e) {
-    clearTimeout(timeoutId);
+const lowFrequencyFns = [
+  function addResizeTimes() {
+    record.window.resize = record.window.resize + 1;
+  },
+  function addBlurTimes() {
+    record.window.blur = record.window.blur + 1;
+  },
+];
 
-    timeoutId = setTimeout(() => {
-      func(e);
-    }, delay);
-  };
+for (let i = 0; i < highFrequencyEvents.length; i++) {
+  addEvent(
+    document,
+    highFrequencyEvents[i],
+    throttleTrailing(highFrequencyFns[i], 200),
+  );
 }
 
-for (let i = 0; i < momentousE.length; i++) {
-  addEvent(document, momentousE[i], debounce(fns[i], 100));
+for (let i = 0; i < lowFrequencyEvents.length; i++) {
+  addEvent(window, lowFrequencyEvents[i], lowFrequencyFns[i]);
 }
