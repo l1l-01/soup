@@ -10,7 +10,6 @@ function selectA(cssClass) {
 
 function throttleTrailing(func, delay) {
   let timeoutId;
-
   return function (e) {
     if (timeoutId) return;
 
@@ -21,7 +20,11 @@ function throttleTrailing(func, delay) {
   };
 }
 
+const visitTime = Date.now();
+
 const userEnv = {
+  recordId: `${window.location.href}${visitTime}`,
+  visitTime: visitTime,
   appVersion: navigator.appVersion,
   browser: navigator.userAgentData?.brands?.[0]?.brand,
   osPlatform: navigator.userAgentData?.platform,
@@ -39,29 +42,38 @@ const record = {
   mouseCoords: [],
   scroll: [],
   touchCoords: [],
-  window: { blur: 0, resize: 0 },
+  window: {
+    blur: 0,
+    resize: 0,
+    href: window.location.href,
+    protocol: window.location.protocol,
+    hostname: window.location.hostname,
+    window: window.location.pathname,
+  },
 };
 
 const highFrequencyEvents = ["mousemove", "scroll", "touchmove"];
 const lowFrequencyEvents = ["resize", "blur"];
 
 const highFrequencyFns = [
-  function addMouseCoords(e) {
-    const t = Date.now();
-    record.mouseCoords.push({ x: e.clientX, y: e.clientY, t: t });
+  function addMouseCoords(e, time = Date.now()) {
+    record.mouseCoords.push({ x: e.clientX, y: e.clientY, t: time });
+    if (record.mouseCoords.length >= 20 || record.touchCoords.length >= 20) {
+      record.mouseCoords = [];
+      record.touchCoords = [];
+      record.scroll = [];
+    }
   },
 
-  function addScrollCoords() {
-    const t = Date.now();
-    record.scroll.push({ x: window.scrollX, y: window.scrollY, t: t });
+  function addScrollCoords(e, time = Date.now()) {
+    record.scroll.push({ x: window.scrollX, y: window.scrollY, t: time });
   },
 
-  function addTouchCoords(e) {
-    const t = Date.now();
+  function addTouchCoords(e, time = Date.now()) {
     record.touchCoords.push({
       x: e.changedTouches[0].clientX,
       y: e.changedTouches[0].clientY,
-      t: t,
+      t: time,
     });
   },
 ];
