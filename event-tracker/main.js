@@ -20,6 +20,27 @@ function throttleTrailing(func, delay) {
   };
 }
 
+function submitRecord() {
+  const jsonRecord = JSON.stringify(record);
+
+  fetch("http://localhost:3000/create", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: jsonRecord,
+  })
+    .then((response) => response.json())
+    .then((result) => console.log("Success:", result))
+    .catch((error) => console.error("Error:", error));
+
+  record.mouseCoords = [];
+  record.touchCoords = [];
+  record.scroll = [];
+
+  console.log(record);
+}
+
 const visitTime = Date.now();
 
 const userEnv = {
@@ -58,10 +79,8 @@ const lowFrequencyEvents = ["resize", "blur"];
 const highFrequencyFns = [
   function addMouseCoords(e, time = Date.now()) {
     record.mouseCoords.push({ x: e.clientX, y: e.clientY, t: time });
-    if (record.mouseCoords.length >= 20 || record.touchCoords.length >= 20) {
-      record.mouseCoords = [];
-      record.touchCoords = [];
-      record.scroll = [];
+    if (record.mouseCoords.length >= 5 || record.touchCoords.length >= 5) {
+      submitRecord();
     }
   },
 
