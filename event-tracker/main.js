@@ -21,24 +21,27 @@ function throttleTrailing(func, delay) {
 }
 
 function submitRecord() {
-  const jsonRecord = JSON.stringify(record);
+  const RecordCopy = {
+    ...record,
+    mouseCoords: [...record.mouseCoords],
+    scroll: [...record.scroll],
+    touchCoords: [...record.touchCoords],
+  };
+
+  record.mouseCoords = [];
+  record.touchCoords = [];
+  record.scroll = [];
 
   fetch("http://localhost:3000/create", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: jsonRecord,
+    body: JSON.stringify(RecordCopy),
   })
     .then((response) => response.json())
-    .then((result) => console.log("Success:", result))
+    .then((result) => console.log("Success: ", result))
     .catch((error) => console.error("Error:", error));
-
-  record.mouseCoords = [];
-  record.touchCoords = [];
-  record.scroll = [];
-
-  console.log(record);
 }
 
 const visitTime = Date.now();
@@ -79,7 +82,7 @@ const lowFrequencyEvents = ["resize", "blur"];
 const highFrequencyFns = [
   function addMouseCoords(e, time = Date.now()) {
     record.mouseCoords.push({ x: e.clientX, y: e.clientY, t: time });
-    if (record.mouseCoords.length >= 5 || record.touchCoords.length >= 5) {
+    if (record.mouseCoords.length >= 20 || record.touchCoords.length >= 20) {
       submitRecord();
     }
   },
@@ -110,10 +113,12 @@ for (let i = 0; i < highFrequencyEvents.length; i++) {
   addEvent(
     document,
     highFrequencyEvents[i],
-    throttleTrailing(highFrequencyFns[i], 200),
+    throttleTrailing(highFrequencyFns[i], 100),
   );
 }
 
 for (let i = 0; i < lowFrequencyEvents.length; i++) {
   addEvent(window, lowFrequencyEvents[i], lowFrequencyFns[i]);
 }
+
+addEvent(window, "beforeunload", submitRecord());
