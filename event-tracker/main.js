@@ -1,5 +1,6 @@
 "use strict";
 
+// ========== UTILITY FUNCTIONS ==========
 function addEvent(ele, e, fn) {
   return ele.addEventListener(e, fn);
 }
@@ -44,6 +45,7 @@ function submitRecord() {
     .catch((error) => console.error("Error:", error));
 }
 
+// ========== INITIALIZATION ==========
 const visitTime = Date.now();
 
 const userEnv = {
@@ -79,6 +81,7 @@ const record = {
 const highFrequencyEvents = ["mousemove", "scroll", "touchmove"];
 const lowFrequencyEvents = ["resize", "blur"];
 
+// ========== Tracking ==========
 const highFrequencyFns = [
   function addMouseCoords(e, time = Date.now()) {
     record.mouseCoords.push({ x: e.clientX, y: e.clientY, t: time });
@@ -121,4 +124,28 @@ for (let i = 0; i < lowFrequencyEvents.length; i++) {
   addEvent(window, lowFrequencyEvents[i], lowFrequencyFns[i]);
 }
 
-addEvent(window, "beforeunload", submitRecord());
+// ========== Submit record on page exit and tab switch ==========
+// TODO: fix origin null
+addEvent(document, "visibilitychange", () => {
+  if (document.hidden) {
+    const blob = new Blob(
+      [
+        JSON.stringify({
+          ...record,
+          mouseCoords: [...record.mouseCoords],
+          scroll: [...record.scroll],
+          touchCoords: [...record.touchCoords],
+        }),
+      ],
+      {
+        type: "application/json",
+      },
+    );
+
+    record.mouseCoords = [];
+    record.touchCoords = [];
+    record.scroll = [];
+
+    navigator.sendBeacon("http://localhost:3000/create", blob);
+  }
+});
