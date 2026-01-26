@@ -13,7 +13,7 @@ pub struct user_env {
     isMobile: bool,
     language: String,
     cookieEnabled: bool,
-    deviceMemory: u8,
+    deviceMemory: f32,
     cpu: u8,
     screenSize: String,
     timezone: String,
@@ -70,5 +70,6 @@ pub async fn create(Json(payload): Json<Record>) -> Json<RecordResp> {
         id: payload.userEnv.recordId,
         sucess: true
     };
+    println!("Data recieved!");
     Json(res)
 }

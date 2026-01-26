@@ -33,16 +33,28 @@ function submitRecord() {
   record.touchCoords = [];
   record.scroll = [];
 
-  fetch("http://localhost:3000/create", {
+  fetch("/api/create", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify(RecordCopy),
   })
-    .then((response) => response.json())
-    .then((result) => console.log("Success: ", result))
-    .catch((error) => console.error("Error:", error));
+    .then((response) => {
+      console.log("Response status:", response.status, response.statusText);
+
+      // Get the error message from server
+      return response.text().then((text) => {
+        console.log("Response body:", text);
+        return { status: response.status, text: text };
+      });
+    })
+    .then((result) => {
+      if (result.status !== 200 && result.status !== 201) {
+        console.error("Server error details:", result.text);
+      }
+    })
+    .catch((error) => console.error("Network Error:", error));
 }
 
 // ========== INITIALIZATION ==========
@@ -125,27 +137,22 @@ for (let i = 0; i < lowFrequencyEvents.length; i++) {
 }
 
 // ========== Submit record on page exit and tab switch ==========
-// TODO: fix origin null
 addEvent(document, "visibilitychange", () => {
   if (document.hidden) {
-    const blob = new Blob(
-      [
-        JSON.stringify({
-          ...record,
-          mouseCoords: [...record.mouseCoords],
-          scroll: [...record.scroll],
-          touchCoords: [...record.touchCoords],
-        }),
-      ],
-      {
-        type: "application/json",
-      },
-    );
+    const recordCopy = {
+      ...record,
+      mouseCoords: [...record.mouseCoords],
+      scroll: [...record.scroll],
+      touchCoords: [...record.touchCoords],
+    };
+    const blob = new Blob([JSON.stringify(recordCopy)], {
+      type: "application/json",
+    });
 
     record.mouseCoords = [];
     record.touchCoords = [];
     record.scroll = [];
 
-    navigator.sendBeacon("http://localhost:3000/create", blob);
+    navigator.sendBeacon("/api/create", blob);
   }
 });
