@@ -1,7 +1,10 @@
 use axum::{
     response::Json,
+    http::StatusCode
 };
 use serde::{Deserialize, Serialize};
+use tokio::fs;
+use chrono;
 
 #[derive(Deserialize)]
 pub struct user_env {
@@ -65,11 +68,22 @@ pub struct RecordResp {
     sucess: bool,
 }
 
-pub async fn create(Json(payload): Json<Record>) -> Json<RecordResp> {
+pub async fn create(Json(payload): Json<Record>) -> Result<Json<RecordResp>, (StatusCode,String)> {
+    let RECORDID = payload.userEnv.recordId;
+
     let res = RecordResp {
-        id: payload.userEnv.recordId,
+        id: RECORDID.clone(),
         sucess: true
     };
     println!("Data recieved!");
-    Json(res)
+
+    // Write to a file
+    // TODO: fix "No such file or directory" error
+    let FILENAME = format!("{}-{}.json",RECORDID,chrono::Utc::now().timestamp());
+    println!("{}",FILENAME);
+    if let Err(e) = fs::write(FILENAME,"something").await {
+        return Err((StatusCode::INTERNAL_SERVER_ERROR, format!("Failed to write file {}",e)));
+    }
+
+    Ok(Json(res))
 }
